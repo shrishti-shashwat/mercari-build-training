@@ -9,7 +9,7 @@ interface Prop {
 type formDataType = {
   name: string,
   category: string,
-  image: string | File,
+  // image: string | File,
 }
 
 export const Listing: React.FC<Prop> = (props) => {
@@ -17,7 +17,7 @@ export const Listing: React.FC<Prop> = (props) => {
   const initialState = {
     name: "",
     category: "",
-    image: "",
+    // image: "",
   };
   const [values, setValues] = useState<formDataType>(initialState);
 
@@ -26,21 +26,21 @@ export const Listing: React.FC<Prop> = (props) => {
       ...values, [event.target.name]: event.target.value,
     })
   };
-  const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setValues({
-      ...values, [event.target.name]: event.target.files![0],
-    })
-  };
-  const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  // const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   setValues({
+  //     ...values, [event.target.name]: event.target.files![0],
+  //   })
+  // };
+  const onSubmit = async(event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData()
     data.append('name', values.name)
     data.append('category', values.category)
-    data.append('image', values.image)
+    // data.append('image', values.image)
 
-    fetch(server.concat('/items'), {
+   await fetch(server.concat('/items'), {
       method: 'POST',
-      mode: 'cors',
+      // mode: 'cors',
       body: data,
     })
       .then(response => {
@@ -57,7 +57,7 @@ export const Listing: React.FC<Prop> = (props) => {
         <div>
           <input type='text' name='name' id='name' placeholder='name' onChange={onValueChange} required />
           <input type='text' name='category' id='category' placeholder='category' onChange={onValueChange} />
-          <input type='file' name='image' id='image' onChange={onFileChange} required />
+          {/* <input type='file' name='image' id='image' onChange={onFileChange} required /> */}
           <button type='submit'>List this item</button>
         </div>
       </form>
