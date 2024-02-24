@@ -15,7 +15,7 @@ logger.level = logging.INFO
 DATABASE_FILE = os.path.join(os.path.dirname(__file__), "..", "db", "mercari.sqlite3")
 items_file = pathlib.Path(__file__).parent.resolve() / "db" / "items.sql"
 images = pathlib.Path(__file__).parent.resolve() / "images"
-origins = [os.environ.get("FRONT_URL", "http://localhost:3000")]
+origins = [os.environ.get("FRONT_URL", "http://127.0.0.1:3000")]
 
 app.add_middleware(
     CORSMiddleware,
