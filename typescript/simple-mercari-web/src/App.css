@@ -7,7 +7,7 @@
   min-height: 8vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: left;
   justify-content: left;
   font-size: calc(10px + 4vmin);
   font-style: oblique;
@@ -16,7 +16,7 @@
 }
 
 .Listing {
-  background-color: #0e223d;
+  background-color: #34495e;
   min-height: 15vh;
   min-width: 20vh;
   display: flex;
@@ -28,7 +28,8 @@
 }
 
 .ItemList {
-  background-color: #0e223d;
+  background-color: #34495e;
+  
   min-height: 20vh;
   display: flex;
   flex-direction: column;
