@@ -5,6 +5,7 @@ import pathlib
 import hashlib
 from fastapi import FastAPI,Path, Form,UploadFile, HTTPException,Query
 from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 
@@ -15,6 +16,7 @@ DATABASE_FILE = os.path.join(os.path.dirname(__file__), "..", "db", "mercari.sql
 items_file = pathlib.Path(__file__).parent.resolve() / "db" / "items.sql"
 images = pathlib.Path(__file__).parent.resolve() / "images"
 origins = [os.environ.get("FRONT_URL", "http://localhost:3000")]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -31,7 +33,6 @@ def create_table_if_not_exists():
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     category_id INTEGER,
-    image_name TEXT NOT NULL,
     FOREIGN KEY (category_id) REFERENCES categories(id)
        )
     ''')
@@ -43,28 +44,55 @@ def root():
     return {"message": "Hello, world!"}
 
 
-@app.post("/items")
-def add_item(name: str = Form(...),category: str =Form(...),image_path: str= Form(...)):
-    logger.info(f"Receive item: {name}")
-    
-    #converting the image to image_hash
-    image_filename = os.path.basename(image_path)
-    image_hash = hashlib.sha256(image_filename.encode()).hexdigest()
-
-    #checking if the table dont exists it will create the table
-    create_table_if_not_exists()
-
-    #connecting to the database
+def get_category_id(category_name):
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
 
-    #inserting values into the database 
-    cursor.execute("INSERT INTO items (name, category, image_name) VALUES (?, ?, ?)",
-                   (name, category, image_hash))
+    # Check if category exists
+    cursor.execute("SELECT id FROM categories WHERE name = ?", (category_name,))
+    result = cursor.fetchone()
+
+    conn.close()
+
+    return result[0] if result else None
+
+
+def create_category(category_name):
+    conn = sqlite3.connect(DATABASE_FILE)
+    cursor = conn.cursor()
+
+    # Insert category if not exists
+    cursor.execute("INSERT OR IGNORE INTO categories (name) VALUES (?)", (category_name,))
+    conn.commit()
+
+    # Retrieve the category id
+    cursor.execute("SELECT id FROM categories WHERE name = ?", (category_name,))
+    result = cursor.fetchone()
+
+    conn.close()
+
+    return result[0]
+
+
+@app.post("/items")
+def add_item(name: str = Form(...), category: str = Form(...)):
+    logger.info(f"Receive item: {name}")
+
+    create_table_if_not_exists()
+
+    # Check if the category exists, if not, create it
+    category_id = get_category_id(category)
+    if not category_id:
+        category_id = create_category(category)
+
+    conn = sqlite3.connect(DATABASE_FILE)
+    cursor = conn.cursor()
+
+    # Insert item into the items table
+    cursor.execute("INSERT INTO items (name, category_id) VALUES (?, ?)", (name, category_id))
 
     conn.commit()
     conn.close()
-
 
     return {"message": f"item received: {name}"}
 
@@ -75,14 +103,18 @@ def get_items():
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM items")
+    cursor.execute("""
+        SELECT items.id, items.name, categories.name 
+        FROM items 
+        INNER JOIN categories ON items.category_id = categories.id
+    """)
     items = cursor.fetchall()
 
     conn.close()
 
-    item_list = [{'id': row[0], 'name': row[1], 'category': row[2], 'image_name': row[3]} for row in items]
+    item_list = [{'id': row[0], 'name': row[1], 'category': row[2]} for row in items]
 
-    return {"items": item_list}     
+    return {"items": item_list}
 
 @app.get("/items/{item_id}")
 def get_one_item(item_id : int = Path(..., title="The ID of the item to retrieve")):
@@ -97,7 +129,7 @@ def get_one_item(item_id : int = Path(..., title="The ID of the item to retrieve
     conn.close()
 
     if result:
-        return {'id': result[0], 'name': result[1], 'category': result[2], 'image_name': result[3]}
+        return {'id': result[0], 'name': result[1], 'category': result[2]}
     else:
         return {"detail": "Item not found"}    
 
@@ -113,7 +145,7 @@ def search_items(keyword: str = Query(..., title="Keyword for search")):
 
     conn.close()
 
-    item_list = [{'name': row[1], 'category': row[2], 'image_name': row[3]} for row in items]
+    item_list = [{'name': row[1], 'category': row[2]} for row in items]
 
     return {"items": item_list}
 
